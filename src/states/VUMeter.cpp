@@ -29,7 +29,7 @@
 
 #include "FSMState.h"
 
-#define AUDIO_PIN 14
+#define AUDIO_PIN 4
 
 const uint8_t dragon_hue = 100;
 const int samples = 300;
@@ -91,7 +91,7 @@ void VUMeter::run()
     // VU Meter
     for (int i = 0; i < 11; ++i)
     {
-        leds[17 + 1 - i] = CHSV((this->tick + i * 21) % 256, 255,
+        leds[17 - 1 - i] = CHSV((this->tick + i * 21) % 256, 255,
             (uint8_t)(n >= 256 * (i + 1) ? 255 : n >= 256 * (i) ? n % 256 : 0));
         LOGF_DEBUG("(VUMeter) LED: %d H: %d S: %d V: %d\r\n", i, (this->tick + i * 21) % 256, 255, (uint8_t)(n >= 256 * (11 - i + 1) ? 255 : n >= 256 * (11 - i) ? n % 256 : 0));
 
