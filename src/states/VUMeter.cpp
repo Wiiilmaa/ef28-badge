@@ -36,7 +36,7 @@
 #define LEDS_NUM DRAGON_LED_NUM + BAR_LED_NUM
 
 const uint8_t dragon_hue = 100;
-const int samples = 300;
+const int samples = 500;
 
 const char *VUMeter::getName()
 {
@@ -45,7 +45,7 @@ const char *VUMeter::getName()
 
 bool VUMeter::shouldBeRemembered()
 {
-    return false; // For Debugging purposes
+    return true;
 }
 void VUMeter::entry()
 {
@@ -90,25 +90,26 @@ void VUMeter::run()
     // Map the peak-to-peak value to a range of 0 to NUM_LEDS * 256 - 1
     uint16_t n = map(peakToPeak, 0, sMaxLevel, 0, 256 * BAR_LED_NUM - 1);
 
-    LOGF_DEBUG("(VUMeter) Min: %d Max: %d peakToPeak: %d Maxlevel: %d Mapped: %d\r\n", sMin, sMax, peakToPeak, sMaxLevel, n);
+    // LOGF_DEBUG("(VUMeter) Min: %d Max: %d peakToPeak: %d Maxlevel: %d Mapped: %d\r\n", sMin, sMax, peakToPeak, sMaxLevel, n);
 
     // VU Meter
     for (int i = 0; i < BAR_LED_NUM; ++i)
     {
-         leds[LEDS_NUM - 1 - i] = CHSV((uint8_t)(this->tick + i * (256 / (BAR_LED_NUM + 1)) % 256), 255,
+        leds[LEDS_NUM - 1 - i] = CHSV((uint8_t)(this->tick + i * (256 / (BAR_LED_NUM + 1)) % 256), 255,
             (uint8_t)(n >= 256 * (i + 1) ? 255 : n >= 256 * (i) ? n % 256 : 0));
-        LOGF_DEBUG("(VUMeter) LED: %d H: %d S: %d V: %d\r\n", LEDS_NUM - 1 - i, (this->tick + i * 21) % 256, 255, (uint8_t)(n >= 256 * (11 - i + 1) ? 255 : n >= 256 * (11 - i) ? n % 256 : 0));
+        // LOGF_DEBUG("(VUMeter) LED: %d H: %d S: %d V: %d\r\n", LEDS_NUM - 1 - i, (this->tick + i * 21) % 256, 255, (uint8_t)(n >= 256 * (i + 1) ? 255 : n >= 256 * (i) ? n % 256 : 0));
 
     }
 
     // Dragon Face
     for (int i = 0; i < DRAGON_LED_NUM; ++i) {
-         leds[i] = CHSV(dragon_hue, 255, (uint8_t)( ((i * DRAGON_SLOW + tick) * (256 / (DRAGON_LED_NUM * DRAGON_SLOW)) ) % 256 ));
+         leds[DRAGON_LED_NUM - 1 - i] = CHSV(dragon_hue, 255, (uint8_t)( 255 - (((i * DRAGON_SLOW + tick) * (256 / (DRAGON_LED_NUM * DRAGON_SLOW)) ) % 256 )));
     }
 
     EFLed.setAll(leds);
 
     this->tick++;
+    if (sMaxLevel > 10 ) sMaxLevel *= 0.9999; // Small decay to raise sensitivity after loud noise
 
 }
 
@@ -145,3 +146,13 @@ std::unique_ptr<FSMState> VUMeter::touchEventAllLongpress()
     return nullptr;
 }
 
+long map_l(long x, long in_min, long in_max, long out_min, long out_max) {
+    const long run = in_max - in_min;
+    if(run == 0){
+        log_e("map(): Invalid input range, min == max");
+        return -1; // AVR returns -1, SAM returns 0
+    }
+    const long rise = out_max - out_min;
+    const long delta = x - in_min;
+    return (delta * rise) / run + out_min;
+}
