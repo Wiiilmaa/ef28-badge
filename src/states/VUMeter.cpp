@@ -30,6 +30,10 @@
 #include "FSMState.h"
 
 #define AUDIO_PIN 4
+#define DRAGON_LED_NUM 6
+#define DRAGON_SLOW 3
+#define BAR_LED_NUM 11
+#define LEDS_NUM DRAGON_LED_NUM + BAR_LED_NUM
 
 const uint8_t dragon_hue = 100;
 const int samples = 300;
@@ -41,7 +45,7 @@ const char *VUMeter::getName()
 
 bool VUMeter::shouldBeRemembered()
 {
-    return true;
+    return false; // For Debugging purposes
 }
 void VUMeter::entry()
 {
@@ -53,7 +57,7 @@ int sMax = -1;
 int sMaxLevel = 1; // provide minimal level not to
 int nl = 32;
 
-CRGB leds[17];
+CRGB leds[LEDS_NUM];
 
 void VUMeter::run()
 {
@@ -84,22 +88,22 @@ void VUMeter::run()
         sMaxLevel = peakToPeak;
 
     // Map the peak-to-peak value to a range of 0 to NUM_LEDS * 256 - 1
-    uint16_t n = map(peakToPeak, 0, sMaxLevel, 0, 256 * 11 - 1);
+    uint16_t n = map(peakToPeak, 0, sMaxLevel, 0, 256 * BAR_LED_NUM - 1);
 
     LOGF_DEBUG("(VUMeter) Min: %d Max: %d peakToPeak: %d Maxlevel: %d Mapped: %d\r\n", sMin, sMax, peakToPeak, sMaxLevel, n);
 
     // VU Meter
-    for (int i = 0; i < 11; ++i)
+    for (int i = 0; i < BAR_LED_NUM; ++i)
     {
-        leds[17 - 1 - i] = CHSV((this->tick + i * 21) % 256, 255,
+         leds[LEDS_NUM - 1 - i] = CHSV((uint8_t)(this->tick + i * (256 / (BAR_LED_NUM + 1)) % 256), 255,
             (uint8_t)(n >= 256 * (i + 1) ? 255 : n >= 256 * (i) ? n % 256 : 0));
-        LOGF_DEBUG("(VUMeter) LED: %d H: %d S: %d V: %d\r\n", i, (this->tick + i * 21) % 256, 255, (uint8_t)(n >= 256 * (11 - i + 1) ? 255 : n >= 256 * (11 - i) ? n % 256 : 0));
+        LOGF_DEBUG("(VUMeter) LED: %d H: %d S: %d V: %d\r\n", LEDS_NUM - 1 - i, (this->tick + i * 21) % 256, 255, (uint8_t)(n >= 256 * (11 - i + 1) ? 255 : n >= 256 * (11 - i) ? n % 256 : 0));
 
     }
 
     // Dragon Face
-    for (int i = 0; 1 < 6; ++i) {
-        leds[i] = CHSV(dragon_hue, 255, (uint8_t)( ((i * 3 + tick) * (256 / 15) ) % 256 ));
+    for (int i = 0; i < DRAGON_LED_NUM; ++i) {
+         leds[i] = CHSV(dragon_hue, 255, (uint8_t)( ((i * DRAGON_SLOW + tick) * (256 / (DRAGON_LED_NUM * DRAGON_SLOW)) ) % 256 ));
     }
 
     EFLed.setAll(leds);
@@ -130,9 +134,7 @@ std::unique_ptr<FSMState> VUMeter::touchEventFingerprintRelease()
         return nullptr;
     }
 
-    this->globals->animMatrixIdx = (this->globals->animMatrixIdx + 1) % 9;
-    this->is_globals_dirty = true;
-    this->tick = 0;
+    sMaxLevel = 1;
 
     return nullptr;
 }
@@ -143,9 +145,3 @@ std::unique_ptr<FSMState> VUMeter::touchEventAllLongpress()
     return nullptr;
 }
 
-/* std::unique_ptr<FSMState> VUMeter::touchEventNoseShortpress()
-{
-    sMaxLevel = 1;
-    return nullptr;
-}
- */
