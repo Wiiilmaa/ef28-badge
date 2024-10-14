@@ -37,7 +37,7 @@
 #define MIN_LEVEL 40
 #define LEVEL_DIVISOR 4
 
-const uint8_t dragon_hue = 130;
+uint8_t dragon_hue = 130;
 const int samples = 500;
 
 
@@ -140,7 +140,7 @@ std::unique_ptr<FSMState> VUMeter::touchEventFingerprintRelease()
         return nullptr;
     }
 
-    sMaxLevel = 1;
+    dragon_hue = (dragon_hue + 31) % 256;
 
     return nullptr;
 }
