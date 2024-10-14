@@ -34,9 +34,12 @@
 #define DRAGON_SLOW 3
 #define BAR_LED_NUM 11
 #define LEDS_NUM DRAGON_LED_NUM + BAR_LED_NUM
+#define MIN_LEVEL 40
+#define LEVEL_DIVISOR 4
 
-const uint8_t dragon_hue = 100;
+const uint8_t dragon_hue = 130;
 const int samples = 500;
+
 
 const char *VUMeter::getName()
 {
@@ -54,7 +57,7 @@ void VUMeter::entry()
 
 int sMin = 4096; // make shure to be outside the range from 0-4095
 int sMax = -1;
-int sMaxLevel = 1; // provide minimal level not to
+int sMaxLevel = MIN_LEVEL; // provide minimal level not to
 int nl = 32;
 
 CRGB leds[LEDS_NUM];
@@ -84,13 +87,13 @@ void VUMeter::run()
     int peakToPeak = sMax - sMin;
 
     // Determin Maxlevel recorded
-    if (sMaxLevel < peakToPeak)
-        sMaxLevel = peakToPeak;
+//    if (sMaxLevel < peakToPeak)
+//        sMaxLevel = peakToPeak;
 
     // Map the peak-to-peak value to a range of 0 to NUM_LEDS * 256 - 1
     uint16_t n = map(peakToPeak, 0, sMaxLevel, 0, 256 * BAR_LED_NUM - 1);
 
-    // LOGF_DEBUG("(VUMeter) Min: %d Max: %d peakToPeak: %d Maxlevel: %d Mapped: %d\r\n", sMin, sMax, peakToPeak, sMaxLevel, n);
+//    LOGF_DEBUG("(VUMeter) Min: %d Max: %d peakToPeak: %d Maxlevel: %d Mapped: %d\r\n", sMin, sMax, peakToPeak, sMaxLevel, n);
 
     // VU Meter
     for (int i = 0; i < BAR_LED_NUM; ++i)
@@ -103,13 +106,15 @@ void VUMeter::run()
 
     // Dragon Face
     for (int i = 0; i < DRAGON_LED_NUM; ++i) {
-         leds[DRAGON_LED_NUM - 1 - i] = CHSV(dragon_hue, 255, (uint8_t)( 255 - (((i * DRAGON_SLOW + tick) * (256 / (DRAGON_LED_NUM * DRAGON_SLOW)) ) % 256 )));
+         leds[i] = CHSV(dragon_hue, 255, (uint8_t)( 255 - (((i * DRAGON_SLOW + tick) * (256 / (DRAGON_LED_NUM * DRAGON_SLOW)) ) % 256 )));
     }
 
     EFLed.setAll(leds);
 
     this->tick++;
-    if (sMaxLevel > 10 ) sMaxLevel *= 0.9999; // Small decay to raise sensitivity after loud noise
+
+    sMaxLevel = sMaxLevel + ((peakToPeak * LEVEL_DIVISOR) - sMaxLevel) * 0.01;
+    if (sMaxLevel < MIN_LEVEL ) sMaxLevel = MIN_LEVEL; // Enshure staying at or above minlevel
 
 }
 
